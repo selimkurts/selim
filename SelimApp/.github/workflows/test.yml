@@ -1,0 +1,37 @@
+name: Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: SelimApp/package.json
+        
+    - name: Install dependencies
+      working-directory: SelimApp
+      run: npm ci
+      
+    - name: Run linter
+      working-directory: SelimApp
+      run: npm run lint
+      continue-on-error: true
+      
+    - name: Run tests
+      working-directory: SelimApp
+      run: npm test -- --coverage --watchAll=false
+
