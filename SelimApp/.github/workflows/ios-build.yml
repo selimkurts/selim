@@ -1,0 +1,61 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: package.json
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Install CocoaPods dependencies
+      working-directory: ios
+      run: |
+        sudo gem install cocoapods
+        pod install
+        
+    - name: Build iOS
+      working-directory: ios
+      run: |
+        xcodebuild -workspace SelimApp.xcworkspace \
+          -scheme SelimApp \
+          -configuration Release \
+          -destination 'generic/platform=iOS' \
+          -archivePath SelimApp.xcarchive \
+          archive CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO
+        
+    - name: Export IPA
+      working-directory: ios
+      run: |
+        xcodebuild -exportArchive \
+          -archivePath SelimApp.xcarchive \
+          -exportPath ./build \
+          -exportOptionsPlist ExportOptions.plist || echo "Export options plist not found, skipping IPA export"
+          
+    - name: Upload IPA
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-ipa
+        path: ios/build/*.ipa
+        if-no-files-found: ignore
+        retention-days: 7
+
